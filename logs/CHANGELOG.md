@@ -1,37 +1,28 @@
-# Changelog
+# Changelog: GitHub Portfolio Analyzer
 
-All notable changes to the GitHub Data Pipeline & Portfolio Analyzer project will be documented in this file.
-
-## [Unreleased] - Phase 1 to 5 Completed
-*Date: 2026-04-23*
-
+## [v1.0.0] - Phase 1 to 7 Completion
 ### Added
-- **Project Structure**: Initialized `src/`, `data/`, `logs/`, `sql/`, `dashboard/`, `tests/` directories.
-- **Environment Management**: Created `.venv`, populated `.env` with GitHub API tokens and PostgreSQL credentials, and created `requirements.txt` (`requests`, `python-dotenv`, `psycopg2-binary`).
-- **Storage Layer**: Designed and implemented PostgreSQL database schema (`sql/schema.sql`):
-  - `repos` for core metadata.
-  - `repo_languages` for tracking programming languages and byte counts.
-  - `commits` for tracking commit history.
-  - `repo_scores` for holding transformed rankings.
-  - `pipeline_runs` for execution auditing.
-- **Ingestion Layer**: Built `src/github_client.py` for API requests with pagination, automatic rate-limit sleeping, and retry mechanisms.
-- **Database Connector**: Built `src/db.py` utilizing idempotent `INSERT ... ON CONFLICT DO UPDATE` commands for safe reruns.
-- **Ingestion Orchestrator**: Built `src/ingest.py` to pull top 100 recent commits and populate the storage layer.
-- **Data Backfill**: Created and ran `src/backfill_readmes.py` to explicitly check and store whether a repository has a `README.md` to feed into quality scoring.
+- **Ingestion Layer:** Custom `GitHubClient` handling pagination and secondary rate limits. Idempotent PostgreSQL UPSERT architecture using `DatabaseConnector`.
+- **Data Enrichment:** Backfill script to capture README presence, powering the "Presentation Score".
+- **Transformation Layer:** Fully objective, mathematical scoring engine in `transform.sql`.
+  - Recency formula uses true exponential decay (`ln(2)`) with a 365-day half-life.
+  - Fork penalty implemented as a soft multiplier instead of binary exclusion.
+- **Analytics Layer:** Created `sql/analytics_views.sql` to strictly separate immutable data engineering math from subjective product rules.
+  - `v_portfolio_scores`: Joins base scores with project multipliers.
+  - `v_insights`: Uses `PERCENT_RANK()` for dynamically robust "Hidden Gem" and "Needs Attention" thresholds.
+- **UX Layer (Streamlit):** Implemented "Progressive Disclosure" architecture in `dashboard/app.py`.
+  - *Layer 1 (Recruiter View):* Clean leaderboard, categorized recency ("Active within last month"), and top recommendations with human-readable reasoning.
+  - *Layer 2 (Narrative Explainability):* Auto-expanding row details converting raw math into "Strengths/Weaknesses".
+  - *Layer 3 (Engineering Deep-Dive):* Expandable raw metric breakdown (Recency: 98, Activity: 72) for technical reviewers.
 
 ### Changed
-- **Transformation Layer**: Re-calibrated scoring logic (`sql/transform.sql`) to optimize for "internship/junior" role signaling, adjusting weights to:
-  - Recency: 50%
-  - Recent Activity (Captured): 30%
-  - Presentation (Quality): 10%
-  - Popularity: 10%
-- **SQL Logic Fixes**: 
-  - Adjusted Popularity score logarithmic scale to correctly base at `0.00` for repositories with no stars/forks.
-  - Applied a `2.5x` multiplier to Recent Activity scoring so repositories with healthy captured activity (40+ recent commits) max out the score instead of being linearly punished.
-  - Corrected Recency exponential decay to use true half-life math (`0.693147 / 365.0`) for a precise 365-day half-life to better represent consistency.
-  - Replaced fragile PostgreSQL `array_length` checks with `cardinality()` for safely evaluating repository topics.
-- **Fork Logic**: Replaced blunt filter with a soft penalty. All forks are now ranked but receive a `0.80x` multiplier penalty on their final score.
-- **Terminology**: Clarified that Activity is "Recent Activity (Captured)" and Quality is actually "Presentation" to better reflect the engineering signal.
+- Refactored dashboard from a "debug panel" to a "portfolio product".
+- Moved manual classifications (`system` / `practice`) directly into the `repos` table as a temporary measure.
 
-### Fixed
-- Fixed an issue where the `has_readme` data was missing from the initial GitHub `/user/repos` API payload by adding a new schema column and backfilling.
+---
+
+## [v2.0.0-draft] - The Curation Layer Shift
+*Design documentation finalized; implementation pending.*
+- **Pivot:** Shifting from a hardcoded personal script to a General-Purpose Data Tool.
+- **Architecture:** Decided to introduce a `repo_overrides` table to separate immutable system data from human curation.
+- **Upcoming:** Adding an "Edit Mode" in Streamlit to manually override project classifications and input external contributions without breaking the data pipeline.

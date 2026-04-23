@@ -482,3 +482,31 @@ If you follow this plan strictly, you will end up with:
 If you skip structure, you’ll end up with something that looks like coursework.
 
 Stick to the pipeline.
+
+---
+
+## 14. Version 2.0 Shift: The Curation Layer (Hybrid Open-Source Tool)
+
+Once the MVP is complete, the project evolves from a personal script into a **General-Purpose Portfolio Tool**.
+
+The goal is to combine **immutable data signals** (automated pipeline) with **human judgment** (curation) without destroying data credibility.
+
+### 14.1 Architecture: Separation of Concerns
+Never allow users to manually edit pipeline-generated scores or raw commits. Instead, introduce a strict separation:
+*   **System Data (Immutable):** Managed by `src/ingest.py`. (Commits, raw scores, recency).
+*   **User Data (Editable):** Managed by the UI. Stored in a new table `repo_overrides`.
+
+### 14.2 The `repo_overrides` Table
+*   `repo_id` (Primary Key)
+*   `project_type` (system, practice, standard)
+*   `display_name` (optional clean name)
+*   `is_featured` (boolean)
+
+SQL views (e.g., `analytics_views.sql`) will merge the immutable system data with the `repo_overrides` table to produce the final dashboard view.
+
+### 14.3 Two-Mode Dashboard (Streamlit)
+The dashboard must evolve to support two modes:
+1.  **View Mode (Recruiter):** The clean, progressively disclosed portfolio ranking.
+2.  **Edit Mode (Curation):** An interactive UI (`st.data_editor`) where developers can classify their projects (`system` vs `practice`) and input external contributions.
+
+*This pivot turns the project from a simple dashboard into a complete Decision-Support Product.*
