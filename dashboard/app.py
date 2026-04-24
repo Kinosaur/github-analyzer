@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import psycopg2
+from sqlalchemy import create_engine
 import os
 from dotenv import load_dotenv
 
@@ -11,22 +11,23 @@ load_dotenv()
 @st.cache_resource
 def get_db_connection():
     try:
-        conn = psycopg2.connect(
-            dbname=os.getenv("DB_NAME", "github_db"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", "postgres"),
-            host=os.getenv("DB_HOST", "localhost"),
-            port=os.getenv("DB_PORT", "5432")
-        )
-        return conn
+        db_name = os.getenv("DB_NAME", "github_db")
+        user = os.getenv("DB_USER", "postgres")
+        password = os.getenv("DB_PASSWORD", "postgres")
+        host = os.getenv("DB_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
+        
+        engine = create_engine(f"postgresql://{user}:{password}@{host}:{port}/{db_name}")
+        return engine
     except Exception as e:
         st.error(f"Error connecting to the database: {e}")
         return None
 
 def fetch_data(query):
-    conn = get_db_connection()
-    if conn:
-        return pd.read_sql_query(query, conn)
+    engine = get_db_connection()
+    if engine:
+        with engine.connect() as conn:
+            return pd.read_sql_query(query, conn)
     return pd.DataFrame()
 
 # Page Config
@@ -102,7 +103,7 @@ if not debug_df.empty:
 
     event = st.dataframe(
         table_df.head(10), # Only show top 10
-        use_container_width=True, 
+        width='stretch', 
         hide_index=True, 
         selection_mode="single-row", 
         on_select="rerun"
